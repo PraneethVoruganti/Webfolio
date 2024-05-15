@@ -1,0 +1,36 @@
+name: Versioning
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  create_version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Get current version
+        id: get_version
+        run: |
+          if git describe --tags --abbrev=0; then
+            echo "::set-output name=tag::$(git describe --tags --abbrev=0)"
+          else
+            echo "::set-output name=tag::0.0.0"
+          fi
+
+      - name: Increment version
+        id: increment_version
+        run: |
+          version=$(echo "${{ steps.get_version.outputs.tag }}" | awk -F. '{print $1"."$2"."$3+1}')
+          echo "::set-output name=version::$version"
+
+      - name: Create new tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git tag ${{ steps.increment_version.outputs.version }}
+          git push origin ${{ steps.increment_version.outputs.version }}
